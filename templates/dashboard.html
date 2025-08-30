@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - FitTrack ML{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="welcome-section mb-4">
+            <h1 class="display-5">Welcome back, {{ user.name }}! 👋</h1>
+            <p class="lead text-muted">Ready to crush your fitness goals today?</p>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Current Weight</h6>
+                        <h4 class="mb-0">{{ user.current_weight }} kg</h4>
+                    </div>
+                    <i class="fas fa-weight fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Today's Calories</h6>
+                        <h4 class="mb-0">{{ total_calories }}</h4>
+                    </div>
+                    <i class="fas fa-fire fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">BMI</h6>
+                        <h4 class="mb-0">{{ "%.1f"|format(user.current_weight / ((user.height/100) ** 2)) }}</h4>
+                    </div>
+                    <i class="fas fa-calculator fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Goal</h6>
+                        <h6 class="mb-0">{{ user.fitness_goal.replace('_', ' ').title() }}</h6>
+                    </div>
+                    <i class="fas fa-target fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="mb-3">Quick Actions</h3>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 quick-action-card">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-alt fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Plan Workout</h5>
+                <p class="card-text">Choose or customize your workout routine</p>
+                <a href="{{ url_for('workout_planner') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-right me-1"></i>Go to Planner
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 quick-action-card">
+            <div class="card-body text-center">
+                <i class="fas fa-utensils fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Log Meal</h5>
+                <p class="card-text">Track your daily nutrition and calories</p>
+                <a href="{{ url_for('nutrition_tracker') }}" class="btn btn-success">
+                    <i class="fas fa-arrow-right me-1"></i>Track Nutrition
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 quick-action-card">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-3x text-info mb-3"></i>
+                <h5 class="card-title">Update Progress</h5>
+                <p class="card-text">Log your weight and body measurements</p>
+                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#progressModal">
+                    <i class="fas fa-arrow-right me-1"></i>Log Progress
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 quick-action-card">
+            <div class="card-body text-center">
+                <i class="fas fa-brain fa-3x text-warning mb-3"></i>
+                <h5 class="card-title">AI Prediction</h5>
+                <p class="card-text">See your predicted weight progress</p>
+                <a href="{{ url_for('prediction_tool') }}" class="btn btn-warning">
+                    <i class="fas fa-arrow-right me-1"></i>Get Prediction
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Progress -->
+{% if recent_progress %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Recent Progress
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Weight (kg)</th>
+                                <th>Body Fat %</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for progress in recent_progress %}
+                            <tr>
+                                <td>{{ progress.date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ progress.weight }}</td>
+                                <td>{{ progress.body_fat_percentage or 'N/A' }}</td>
+                                <td>{{ progress.notes or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('progress_tracker') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-chart-line me-1"></i>View Full Progress
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Quick Progress Log Modal -->
+<div class="modal fade" id="progressModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Log Progress</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="progressForm">
+                    <div class="mb-3">
+                        <label for="weight" class="form-label">Weight (kg)</label>
+                        <input type="number" class="form-control" id="weight" name="weight" step="0.1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="body_fat_percentage" class="form-label">Body Fat % (optional)</label>
+                        <input type="number" class="form-control" id="body_fat_percentage" name="body_fat_percentage" step="0.1" min="0" max="100">
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes (optional)</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveProgress">Save Progress</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('saveProgress').addEventListener('click', async function() {
+    const formData = new FormData(document.getElementById('progressForm'));
+    const data = Object.fromEntries(formData);
+    
+    try {
+        const response = await fetch('/api/progress/log', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Error saving progress. Please try again.');
+        }
+    } catch (error) {
+        alert('Error saving progress. Please try again.');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Workout Planner - FitTrack ML{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-calendar-alt me-2"></i>Workout Planner</h2>
+        <p class="lead text-muted">Choose from pre-built workout templates or create your custom routine</p>
+    </div>
+</div>
+
+{% if user_workouts %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-star me-2"></i>Your Active Workout Plan</h5>
+            </div>
+            <div class="card-body">
+                {% for workout in user_workouts %}
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-check-circle me-2"></i>Active Plan</h6>
+                    <p class="mb-0">You have an active workout plan. Check your weekly schedule below or select a new template.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h4>Available Workout Templates</h4>
+        <p class="text-muted">Select a template that matches your fitness goals</p>
+    </div>
+</div>
+
+<div class="row" id="workoutTemplates">
+    {% for template in templates %}
+    <div class="col-lg-6 mb-4">
+        <div class="card workout-template-card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-dumbbell me-2"></i>{{ template.name }}
+                </h5>
+                <small class="text-muted">Goal: {{ template.goal.replace('_', ' ').title() }}</small>
+            </div>
+            <div class="card-body">
+                <p class="card-text">{{ template.description }}</p>
+                
+                {% if template.weekly_plan %}
+                <div class="weekly-plan">
+                    <h6>Weekly Schedule:</h6>
+                    <div class="row">
+                        {% for day, exercises in template.weekly_plan.items() %}
+                        <div class="col-md-6 mb-2">
+                            <strong>{{ day }}:</strong>
+                            {% if exercises %}
+                                <ul class="small mb-1">
+                                    {% for exercise in exercises[:2] %}
+                                    <li>{{ exercise }}</li>
+                                    {% endfor %}
+                                    {% if exercises|length > 2 %}
+                                    <li class="text-muted">+ {{ exercises|length - 2 }} more exercises</li>
+                                    {% endif %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">Rest Day</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <button class="btn btn-primary select-template" data-template-id="{{ template.id }}">
+                        <i class="fas fa-check me-1"></i>Select This Plan
+                    </button>
+                    <button class="btn btn-outline-secondary ms-2" data-bs-toggle="modal" data-bs-target="#viewModal{{ template.id }}">
+                        <i class="fas fa-eye me-1"></i>View Details
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Template Details Modal -->
+    <div class="modal fade" id="viewModal{{ template.id }}" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ template.name }} - Full Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Goal:</strong> {{ template.goal.replace('_', ' ').title() }}</p>
+                    <p><strong>Description:</strong> {{ template.description }}</p>
+                    
+                    {% if template.weekly_plan %}
+                    <h6>Complete Weekly Plan:</h6>
+                    {% for day, exercises in template.weekly_plan.items() %}
+                    <div class="mb-3">
+                        <h6>{{ day }}:</h6>
+                        {% if exercises %}
+                            <ul>
+                                {% for exercise in exercises %}
+                                <li>{{ exercise }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted">Rest Day - Focus on recovery and light stretching</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary select-template" data-template-id="{{ template.id }}">
+                        <i class="fas fa-check me-1"></i>Select This Plan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Success!</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Your workout plan has been successfully selected! You can now start following your new routine.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Great!</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectButtons = document.querySelectorAll('.select-template');
+    
+    selectButtons.forEach(button => {
+        button.addEventListener('click', async function() {
+            const templateId = this.getAttribute('data-template-id');
+            
+            try {
+                const response = await fetch('/api/workout/select-template', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        template_id: parseInt(templateId)
+                    })
+                });
+                
+                if (response.ok) {
+                    // Close any open modals
+                    const modals = document.querySelectorAll('.modal');
+                    modals.forEach(modal => {
+                        const modalInstance = bootstrap.Modal.getInstance(modal);
+                        if (modalInstance) {
+                            modalInstance.hide();
+                        }
+                    });
+                    
+                    // Show success modal
+                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                    successModal.show();
+                    
+                    // Reload page after modal closes
+                    document.getElementById('successModal').addEventListener('hidden.bs.modal', function() {
+                        location.reload();
+                    });
+                } else {
+                    alert('Error selecting workout plan. Please try again.');
+                }
+            } catch (error) {
+                alert('Error selecting workout plan. Please try again.');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

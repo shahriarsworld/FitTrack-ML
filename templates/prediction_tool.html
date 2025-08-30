@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+
+{% block title %}AI Prediction Tool - FitTrack ML{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-brain me-2"></i>AI Prediction Tool</h2>
+        <p class="lead text-muted">Get AI-powered predictions for your weight progress based on your habits and goals</p>
+    </div>
+</div>
+
+<!-- Prediction Form -->
+<div class="row mb-4">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-magic me-2"></i>Weight Prediction Parameters</h5>
+            </div>
+            <div class="card-body">
+                <form id="predictionForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="current_weight" class="form-label">Current Weight (kg)</label>
+                            <input type="number" class="form-control" id="current_weight" name="current_weight" 
+                                   value="{{ user.current_weight }}" step="0.1" min="20" max="300" required>
+                            <small class="form-text text-muted">Your starting weight for the prediction</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="daily_calories" class="form-label">Average Daily Calories</label>
+                            <input type="number" class="form-control" id="daily_calories" name="daily_calories" 
+                                   placeholder="e.g., 2000" min="800" max="5000" required>
+                            <small class="form-text text-muted">Your average calorie intake per day</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="weekly_workout_minutes" class="form-label">Weekly Workout Minutes</label>
+                            <input type="number" class="form-control" id="weekly_workout_minutes" name="weekly_workout_minutes" 
+                                   placeholder="e.g., 300" min="0" max="2000" required>
+                            <small class="form-text text-muted">Total minutes of exercise per week</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="weeks_ahead" class="form-label">Weeks to Predict</label>
+                            <input type="number" class="form-control" id="weeks_ahead" name="weeks_ahead" 
+                                   placeholder="e.g., 8" min="1" max="52" required>
+                            <small class="form-text text-muted">How many weeks in the future to predict</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>How it works:</strong> Our AI model analyzes your current weight, calorie intake, 
+                                exercise habits, and time frame to predict your weight progression. This is an estimate 
+                                based on general patterns and should be used for motivation and planning purposes.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-brain me-2"></i>Generate Prediction
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Prediction Results -->
+<div id="predictionResults" class="row" style="display: none;">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Prediction Results</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="prediction-metric">
+                        <h6 class="text-muted">Current Weight</h6>
+                        <h3 class="text-primary" id="currentWeightDisplay">{{ user.current_weight }} kg</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="prediction-metric">
+                                <h6 class="text-muted">Predicted Weight</h6>
+                                <h3 class="text-success" id="predictedWeight">0 kg</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="prediction-metric">
+                                <h6 class="text-muted">Expected Change</h6>
+                                <h3 id="weightChange" class="text-info">0 kg</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="alert" id="predictionInterpretation">
+                            <!-- Interpretation will be added here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <button class="btn btn-outline-secondary me-2" onclick="resetPrediction()">
+                        <i class="fas fa-redo me-1"></i>Try Another Prediction
+                    </button>
+                    <button class="btn btn-primary" onclick="savePrediction()">
+                        <i class="fas fa-save me-1"></i>Save This Prediction
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Tips -->
+<div class="row mt-4">
+    <div class="col-lg-10 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Prediction Tips & Guidelines</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-utensils text-success me-2"></i>Calorie Guidelines</h6>
+                        <ul class="small">
+                            <li>Weight loss: Create a 500-750 calorie deficit daily</li>
+                            <li>Maintenance: Match your daily energy expenditure</li>
+                            <li>Weight gain: Add 300-500 calories above maintenance</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-dumbbell text-primary me-2"></i>Exercise Guidelines</h6>
+                        <ul class="small">
+                            <li>Minimum: 150 minutes moderate activity per week</li>
+                            <li>Weight loss: 300+ minutes per week recommended</li>
+                            <li>Include both cardio and strength training</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Important:</strong> These predictions are estimates based on general patterns. 
+                            Individual results may vary due to factors like metabolism, genetics, medical conditions, 
+                            and lifestyle changes. Always consult with healthcare professionals for personalized advice.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let lastPredictionData = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('predictionForm').addEventListener('submit', handlePredictionSubmit);
+});
+
+async function handlePredictionSubmit(e) {
+    e.preventDefault();
+    
+    console.log('[DEBUG] Form submitted');
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+    
+    console.log('[DEBUG] Form data:', data);
+    
+    // Validate all fields are filled
+    const requiredFields = ['current_weight', 'daily_calories', 'weekly_workout_minutes', 'weeks_ahead'];
+    const missingFields = requiredFields.filter(field => !data[field] || data[field].trim() === '');
+    
+    if (missingFields.length > 0) {
+        alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+        return;
+    }
+    
+    // Convert to proper types
+    try {
+        data.current_weight = parseFloat(data.current_weight);
+        data.daily_calories = parseFloat(data.daily_calories);
+        data.weekly_workout_minutes = parseFloat(data.weekly_workout_minutes);
+        data.weeks_ahead = parseInt(data.weeks_ahead);
+    } catch (error) {
+        alert('Please enter valid numbers for all fields');
+        return;
+    }
+    
+    console.log('[DEBUG] Processed data:', data);
+    
+    // Show loading state
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating Prediction...';
+    submitButton.disabled = true;
+    
+    try {
+        console.log('[DEBUG] Sending request to /api/predict-weight');
+        
+        const response = await fetch('/api/predict-weight', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        console.log('[DEBUG] Response status:', response.status);
+        console.log('[DEBUG] Response headers:', response.headers);
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('[DEBUG] Success result:', result);
+            displayPredictionResults(data, result);
+            lastPredictionData = { input: data, result: result };
+        } else {
+            const errorText = await response.text();
+            console.error('[DEBUG] Error response text:', errorText);
+            
+            let errorMessage = 'Unknown error occurred';
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.error || errorMessage;
+            } catch {
+                errorMessage = errorText || errorMessage;
+            }
+            
+            alert(`Prediction error: ${errorMessage}`);
+        }
+    } catch (error) {
+        console.error('[DEBUG] Request error:', error);
+        alert(`Network error: ${error.message}. Please check your connection and try again.`);
+    } finally {
+        // Reset button
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+    }
+}
+
+function displayPredictionResults(inputData, result) {
+    console.log('[DEBUG] Displaying prediction results:', result);
+    
+    // Update display values with null checks
+    const currentWeightEl = document.getElementById('currentWeightDisplay');
+    const predictedWeightEl = document.getElementById('predictedWeight');
+    const changeElement = document.getElementById('weightChange');
+    const resultsContainer = document.getElementById('predictionResults');
+    
+    if (!currentWeightEl || !predictedWeightEl || !changeElement || !resultsContainer) {
+        console.error('[DEBUG] Missing elements:', {
+            currentWeightEl: !!currentWeightEl,
+            predictedWeightEl: !!predictedWeightEl,
+            changeElement: !!changeElement,
+            resultsContainer: !!resultsContainer
+        });
+        alert('Error: Page elements not found. Please refresh the page and try again.');
+        return;
+    }
+    
+    // Update display values
+    currentWeightEl.textContent = inputData.current_weight + ' kg';
+    predictedWeightEl.textContent = result.predicted_weight + ' kg';
+    
+    const change = result.weight_change;
+    changeElement.textContent = (change > 0 ? '+' : '') + change + ' kg';
+    
+    // Color code the change
+    if (change > 0) {
+        changeElement.className = 'text-success';
+    } else if (change < 0) {
+        changeElement.className = 'text-danger';
+    } else {
+        changeElement.className = 'text-muted';
+    }
+    
+    console.log('[DEBUG] Updated elements successfully');
+    
+    // Generate interpretation
+    generateInterpretation(inputData, result);
+    
+    // Show results
+    resultsContainer.style.display = 'block';
+    
+    // Scroll to results
+    resultsContainer.scrollIntoView({ behavior: 'smooth' });
+}
+
+function generateInterpretation(inputData, result) {
+    const interpretationElement = document.getElementById('predictionInterpretation');
+    
+    if (!interpretationElement) {
+        console.error('[DEBUG] Interpretation element not found');
+        return;
+    }
+    
+    const change = result.weight_change;
+    const weeks = parseInt(inputData.weeks_ahead);
+    const weeklyChange = (change / weeks).toFixed(1);
+    
+    let alertClass = 'alert-info';
+    let icon = 'fas fa-info-circle';
+    let interpretation = '';
+    
+    if (change > 0) {
+        alertClass = 'alert-success';
+        icon = 'fas fa-arrow-up';
+        interpretation = `
+            <strong>Weight Gain Prediction:</strong> Based on your inputs, you're predicted to gain 
+            ${Math.abs(change)} kg over ${weeks} weeks (approximately ${Math.abs(weeklyChange)} kg per week). 
+            This suggests your calorie intake exceeds your energy expenditure.
+        `;
+    } else if (change < 0) {
+        alertClass = 'alert-warning';
+        icon = 'fas fa-arrow-down';
+        interpretation = `
+            <strong>Weight Loss Prediction:</strong> Based on your inputs, you're predicted to lose 
+            ${Math.abs(change)} kg over ${weeks} weeks (approximately ${Math.abs(weeklyChange)} kg per week). 
+            This suggests you're in a caloric deficit.
+        `;
+    } else {
+        alertClass = 'alert-info';
+        icon = 'fas fa-minus';
+        interpretation = `
+            <strong>Weight Maintenance Prediction:</strong> Based on your inputs, your weight is predicted 
+            to remain stable over ${weeks} weeks. This suggests your calorie intake matches your energy expenditure.
+        `;
+    }
+    
+    interpretationElement.className = `alert ${alertClass}`;
+    interpretationElement.innerHTML = `
+        <i class="${icon} me-2"></i>
+        ${interpretation}
+        <br><br>
+        <small><strong>Remember:</strong> This is an estimate. Actual results depend on consistency, 
+        individual metabolism, and other lifestyle factors.</small>
+    `;
+}
+
+function resetPrediction() {
+    document.getElementById('predictionResults').style.display = 'none';
+    document.getElementById('predictionForm').reset();
+    document.getElementById('current_weight').value = {{ user.current_weight }};
+    lastPredictionData = null;
+}
+
+function savePrediction() {
+    if (lastPredictionData) {
+        // For now, just show a confirmation
+        // In a real app, you might want to save this to a predictions table
+        alert('Prediction saved! You can track your actual progress against this prediction.');
+    }
+}
+
+// Add some helpful placeholder values when fields are focused
+document.addEventListener('DOMContentLoaded', function() {
+    const caloriesInput = document.getElementById('daily_calories');
+    const workoutInput = document.getElementById('weekly_workout_minutes');
+    
+    caloriesInput.addEventListener('focus', function() {
+        if (!this.value) {
+            // Provide some guidance based on common goals
+            this.placeholder = '2000 (maintenance), 1500 (loss), 2500 (gain)';
+        }
+    });
+    
+    workoutInput.addEventListener('focus', function() {
+        if (!this.value) {
+            this.placeholder = '150 (minimum), 300 (weight loss), 450 (active)';
+        }
+    });
+});
+</script>
+{% endblock %}

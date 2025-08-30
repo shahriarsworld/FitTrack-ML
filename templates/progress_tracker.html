@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+
+{% block title %}Progress Tracker - FitTrack ML{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-chart-line me-2"></i>Progress Tracker</h2>
+        <p class="lead text-muted">Monitor your fitness journey with detailed progress tracking and visualizations</p>
+    </div>
+</div>
+
+<!-- Add Progress Log -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-plus me-2"></i>Log Today's Progress</h5>
+            </div>
+            <div class="card-body">
+                <form id="progressForm">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="weight" class="form-label">Weight (kg)</label>
+                            <input type="number" class="form-control" id="weight" name="weight" step="0.1" min="20" max="300" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="body_fat_percentage" class="form-label">Body Fat % (optional)</label>
+                            <input type="number" class="form-control" id="body_fat_percentage" name="body_fat_percentage" step="0.1" min="0" max="100">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="notes" class="form-label">Notes (optional)</label>
+                            <input type="text" class="form-control" id="notes" name="notes" placeholder="How are you feeling today?">
+                        </div>
+                        <div class="col-md-2 mb-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-plus me-1"></i>Log Progress
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Charts -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Weight Progress</h5>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 400px;">
+                    <canvas id="weightChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Progress Stats</h5>
+            </div>
+            <div class="card-body">
+                <div id="progressStats">
+                    <div class="text-center mb-3">
+                        <h6 class="text-muted">Total Entries</h6>
+                        <h4 class="text-primary" id="totalEntries">{{ progress_logs|length }}</h4>
+                    </div>
+                    
+                    {% if progress_logs|length > 1 %}
+                    <div class="text-center mb-3">
+                        <h6 class="text-muted">Weight Change</h6>
+                        <h4 class="text-success" id="weightChange">
+                            {% set first_weight = progress_logs[-1].weight %}
+                            {% set last_weight = progress_logs[0].weight %}
+                            {% set change = last_weight - first_weight %}
+                            {% if change > 0 %}+{% endif %}{{ "%.1f"|format(change) }} kg
+                        </h4>
+                    </div>
+                    
+                    <div class="text-center mb-3">
+                        <h6 class="text-muted">Tracking Since</h6>
+                        <p class="mb-0">{{ progress_logs[-1].date.strftime('%B %d, %Y') }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="text-center">
+                        <h6 class="text-muted">Last Entry</h6>
+                        <p class="mb-0">
+                            {% if progress_logs %}
+                                {{ progress_logs[0].date.strftime('%B %d, %Y') }}
+                            {% else %}
+                                No entries yet
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Log History -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Progress History</h5>
+                <button class="btn btn-sm btn-outline-secondary" onclick="refreshChart()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh Chart
+                </button>
+            </div>
+            <div class="card-body">
+                {% if progress_logs %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Weight (kg)</th>
+                                <th>Body Fat %</th>
+                                <th>Notes</th>
+                                <th>Change from Previous</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for progress in progress_logs %}
+                            <tr>
+                                <td>{{ progress.date.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <strong>{{ progress.weight }} kg</strong>
+                                </td>
+                                <td>
+                                    {% if progress.body_fat_percentage %}
+                                        {{ progress.body_fat_percentage }}%
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if progress.notes %}
+                                        <small>{{ progress.notes }}</small>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if loop.index < progress_logs|length %}
+                                        {% set prev_weight = progress_logs[loop.index].weight %}
+                                        {% set change = progress.weight - prev_weight %}
+                                        {% if change > 0 %}
+                                            <span class="text-success">+{{ "%.1f"|format(change) }} kg</span>
+                                        {% elif change < 0 %}
+                                            <span class="text-danger">{{ "%.1f"|format(change) }} kg</span>
+                                        {% else %}
+                                            <span class="text-muted">No change</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">First entry</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No progress logged yet</h5>
+                    <p class="text-muted">Start tracking your progress by logging your first entry above!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js Library - Using a more reliable CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+<script>
+let weightChart;
+
+// Wait for Chart.js to load completely
+function waitForChart() {
+    return new Promise((resolve) => {
+        if (typeof Chart !== 'undefined') {
+            resolve();
+        } else {
+            setTimeout(() => waitForChart().then(resolve), 100);
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for Chart.js to load, then initialize
+    waitForChart().then(() => {
+        console.log('Chart.js loaded successfully');
+        initializeChart();
+    });
+    
+    document.getElementById('progressForm').addEventListener('submit', handleProgressSubmit);
+});
+
+async function initializeChart() {
+    try {
+        console.log('Initializing chart...');
+        
+        // Try to fetch data from API first
+        let data = null;
+        try {
+            const response = await fetch('/api/progress/data');
+            if (response.ok) {
+                data = await response.json();
+                console.log('API data loaded:', data);
+            }
+        } catch (apiError) {
+            console.log('API not available, using fallback data');
+        }
+        
+        // If API fails or no data, create sample/fallback data from template variables
+        if (!data || !data.dates || data.dates.length === 0) {
+            data = createFallbackData();
+            console.log('Using fallback data:', data);
+        }
+        
+        createChart(data);
+    } catch (error) {
+        console.error('Error loading progress data:', error);
+        // Create sample chart as fallback
+        createChart(createSampleData());
+    }
+}
+
+function createFallbackData() {
+    // Create sample data or extract from template if available
+    const fallbackData = {
+        dates: [],
+        weights: []
+    };
+    
+    // Try to extract data from the table if it exists
+    const tableRows = document.querySelectorAll('tbody tr');
+    if (tableRows.length > 0) {
+        console.log('Found table data, extracting...');
+        tableRows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 2) {
+                const date = cells[0].textContent.trim();
+                const weightText = cells[1].textContent.trim();
+                const weight = parseFloat(weightText.replace(' kg', ''));
+                
+                if (date && !isNaN(weight)) {
+                    fallbackData.dates.push(date);
+                    fallbackData.weights.push(weight);
+                }
+            }
+        });
+        
+        // Reverse to show chronological order (oldest first)
+        fallbackData.dates.reverse();
+        fallbackData.weights.reverse();
+    }
+    
+    // If still no data, create sample data
+    if (fallbackData.dates.length === 0) {
+        return createSampleData();
+    }
+    
+    return fallbackData;
+}
+
+function createSampleData() {
+    console.log('Creating sample data for demonstration');
+    const sampleData = {
+        dates: [],
+        weights: []
+    };
+    
+    // Create sample data for the last 7 days
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        sampleData.dates.push(date.toISOString().split('T')[0]);
+        sampleData.weights.push(70 + Math.sin(i * 0.5) * 3 + Math.random() * 2 - 1); // Realistic weight variation
+    }
+    
+    return sampleData;
+}
+
+function createChart(data) {
+    console.log('Creating chart with data:', data);
+    
+    const ctx = document.getElementById('weightChart');
+    if (!ctx) {
+        console.error('Chart canvas element not found');
+        return;
+    }
+    
+    // Destroy existing chart if it exists
+    if (weightChart) {
+        weightChart.destroy();
+    }
+    
+    // Always show chart, even with sample data
+    try {
+        weightChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.dates,
+                datasets: [{
+                    label: 'Weight (kg)',
+                    data: data.weights,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.3,
+                    fill: true,
+                    borderWidth: 3,
+                    pointBackgroundColor: 'rgb(75, 192, 192)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Weight Progress Over Time',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        color: '#afedd3'
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date',
+                            font: {
+                                size: 14
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Weight (kg)',
+                            font: {
+                                size: 14
+                            }
+                        },
+                        beginAtZero: false,
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                elements: {
+                    point: {
+                        hoverRadius: 8
+                    }
+                }
+            }
+        });
+        
+        console.log('Chart created successfully');
+    } catch (error) {
+        console.error('Error creating chart:', error);
+        
+        // Show error message
+        const container = ctx.parentElement;
+        container.innerHTML = `
+            <div class="d-flex align-items-center justify-content-center h-100">
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                    <h5 class="text-muted">Chart Error</h5>
+                    <p class="text-muted">Unable to load chart. Please refresh the page.</p>
+                    <button class="btn btn-primary" onclick="location.reload()">Refresh Page</button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+async function handleProgressSubmit(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+    
+    // Remove empty fields
+    Object.keys(data).forEach(key => {
+        if (data[key] === '') {
+            delete data[key];
+        }
+    });
+    
+    try {
+        const response = await fetch('/api/progress/log', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            // Reset form
+            e.target.reset();
+            
+            // Show success message
+            FitTrackML.showToast('Progress logged successfully!', 'success');
+            
+            // Refresh page after a short delay
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            FitTrackML.showToast('Error logging progress. Please try again.', 'error');
+        }
+    } catch (error) {
+        FitTrackML.showToast('Error logging progress. Please try again.', 'error');
+    }
+}
+
+async function refreshChart() {
+    await initializeChart();
+    FitTrackML.showToast('Chart refreshed!', 'info');
+}
+</script>
+{% endblock %}

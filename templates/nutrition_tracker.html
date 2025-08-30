@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Nutrition Tracker - FitTrack ML{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-utensils me-2"></i>Nutrition Tracker</h2>
+        <p class="lead text-muted">Track your daily nutrition intake and monitor your calories and macros</p>
+    </div>
+</div>
+
+<!-- Daily Summary -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-calendar-day me-2"></i>Today's Nutrition Summary</h5>
+            </div>
+            <div class="card-body">
+                <div id="nutritionSummary" class="row">
+                    <div class="col-md-3 text-center">
+                        <h4 class="text-primary" id="totalCalories">0</h4>
+                        <small class="text-muted">Total Calories</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <h4 class="text-success" id="totalProtein">0g</h4>
+                        <small class="text-muted">Protein</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <h4 class="text-warning" id="totalCarbs">0g</h4>
+                        <small class="text-muted">Carbohydrates</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <h4 class="text-info" id="totalFat">0g</h4>
+                        <small class="text-muted">Fat</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Food -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-plus me-2"></i>Add Food Item</h5>
+            </div>
+            <div class="card-body">
+                <form id="addFoodForm">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="foodSelect" class="form-label">Food Item</label>
+                            <select class="form-control" id="foodSelect" name="food_id" required>
+                                <option value="">Select a food item...</option>
+                                {% for food in food_items %}
+                                <option value="{{ food.id }}" 
+                                        data-calories="{{ food.calories_per_100g }}"
+                                        data-protein="{{ food.protein_per_100g }}"
+                                        data-carbs="{{ food.carbs_per_100g }}"
+                                        data-fat="{{ food.fat_per_100g }}">
+                                    {{ food.name }} ({{ food.calories_per_100g }} cal/100g)
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="quantity" class="form-label">Quantity (grams)</label>
+                            <input type="number" class="form-control" id="quantity" name="quantity_grams" min="1" step="1" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="mealType" class="form-label">Meal Type</label>
+                            <select class="form-control" id="mealType" name="meal_type">
+                                <option value="breakfast">Breakfast</option>
+                                <option value="lunch">Lunch</option>
+                                <option value="dinner">Dinner</option>
+                                <option value="snack">Snack</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-plus me-1"></i>Add
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Nutrition Preview -->
+                <div id="nutritionPreview" class="mt-3" style="display: none;">
+                    <div class="alert alert-info">
+                        <h6>Nutrition Preview:</h6>
+                        <div class="row">
+                            <div class="col-3">Calories: <span id="previewCalories">0</span></div>
+                            <div class="col-3">Protein: <span id="previewProtein">0</span>g</div>
+                            <div class="col-3">Carbs: <span id="previewCarbs">0</span>g</div>
+                            <div class="col-3">Fat: <span id="previewFat">0</span>g</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Today's Food Log -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Today's Food Log</h5>
+                <button class="btn btn-sm btn-outline-secondary" onclick="refreshNutritionData()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                {% if today_logs %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Food Item</th>
+                                <th>Quantity (g)</th>
+                                <th>Calories</th>
+                                <th>Protein (g)</th>
+                                <th>Carbs (g)</th>
+                                <th>Fat (g)</th>
+                                <th>Meal Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log, food in today_logs %}
+                            <tr>
+                                <td>{{ food.name }}</td>
+                                <td>{{ log.quantity_grams }}</td>
+                                <td>{{ "%.1f"|format((log.quantity_grams / 100) * food.calories_per_100g) }}</td>
+                                <td>{{ "%.1f"|format((log.quantity_grams / 100) * food.protein_per_100g) }}</td>
+                                <td>{{ "%.1f"|format((log.quantity_grams / 100) * food.carbs_per_100g) }}</td>
+                                <td>{{ "%.1f"|format((log.quantity_grams / 100) * food.fat_per_100g) }}</td>
+                                <td><span class="badge bg-primary">{{ log.meal_type.title() }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No food logged today</h5>
+                    <p class="text-muted">Start tracking your nutrition by adding your first meal above!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentNutritionData = {
+    total_calories: 0,
+    total_protein: 0,
+    total_carbs: 0,
+    total_fat: 0
+};
+
+// Load nutrition data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    refreshNutritionData();
+    
+    // Setup form handlers
+    document.getElementById('addFoodForm').addEventListener('submit', handleAddFood);
+    document.getElementById('foodSelect').addEventListener('change', updatePreview);
+    document.getElementById('quantity').addEventListener('input', updatePreview);
+});
+
+async function refreshNutritionData() {
+    try {
+        const response = await fetch('/api/nutrition/summary');
+        if (response.ok) {
+            currentNutritionData = await response.json();
+            updateNutritionDisplay();
+        }
+    } catch (error) {
+        console.error('Error loading nutrition data:', error);
+    }
+}
+
+function updateNutritionDisplay() {
+    document.getElementById('totalCalories').textContent = currentNutritionData.total_calories;
+    document.getElementById('totalProtein').textContent = currentNutritionData.total_protein + 'g';
+    document.getElementById('totalCarbs').textContent = currentNutritionData.total_carbs + 'g';
+    document.getElementById('totalFat').textContent = currentNutritionData.total_fat + 'g';
+}
+
+function updatePreview() {
+    const foodSelect = document.getElementById('foodSelect');
+    const quantityInput = document.getElementById('quantity');
+    const preview = document.getElementById('nutritionPreview');
+    
+    const selectedOption = foodSelect.selectedOptions[0];
+    const quantity = parseFloat(quantityInput.value) || 0;
+    
+    if (selectedOption && quantity > 0) {
+        const multiplier = quantity / 100;
+        const calories = (parseFloat(selectedOption.dataset.calories) * multiplier).toFixed(1);
+        const protein = (parseFloat(selectedOption.dataset.protein) * multiplier).toFixed(1);
+        const carbs = (parseFloat(selectedOption.dataset.carbs) * multiplier).toFixed(1);
+        const fat = (parseFloat(selectedOption.dataset.fat) * multiplier).toFixed(1);
+        
+        document.getElementById('previewCalories').textContent = calories;
+        document.getElementById('previewProtein').textContent = protein;
+        document.getElementById('previewCarbs').textContent = carbs;
+        document.getElementById('previewFat').textContent = fat;
+        
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+async function handleAddFood(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+    
+    try {
+        const response = await fetch('/api/nutrition/log', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            // Reset form
+            e.target.reset();
+            document.getElementById('nutritionPreview').style.display = 'none';
+            
+            // Refresh data and reload page
+            await refreshNutritionData();
+            location.reload();
+        } else {
+            alert('Error adding food item. Please try again.');
+        }
+    } catch (error) {
+        alert('Error adding food item. Please try again.');
+    }
+}
+</script>
+{% endblock %}
